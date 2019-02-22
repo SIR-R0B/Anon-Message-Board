@@ -30,7 +30,6 @@ var threadModel = new Schema({
 
 var thread = mongoose.model('thread',threadModel);
 
-
 module.exports = function (app) {
   
   app.route('/api/threads/:board')
@@ -45,6 +44,14 @@ module.exports = function (app) {
     
     addThread.save((err,data)=> err ? err : res.redirect('/b/'+req.params.board));
     
+  })
+  .get((req,res)=>{
+  //need to validate the query and projection = an array of the most recent 10 bumped threads on the board with only the most recent 3 replies from /api/threads/{board}. The reported and delete_passwords fields will not be sent.
+    thread.find({board: req.params.board}, {replies: {$slice: 3}}).sort({bumped_on: 'desc'}).limit(10).select('-reported').select('-delete_password').select('-__v').select('-replies.delete_password').select('-replies.reported').exec((err,data)=>{
+    if (err) err;
+      res.json(data);
+    });
+  
   });
   
   
@@ -60,6 +67,8 @@ module.exports = function (app) {
     reported: false
     });
     
+    console.log(addReply);
+    
     thread.findById({_id: req.body.thread_id},(err,data)=> {
       
       if (err) return err;
@@ -67,6 +76,8 @@ module.exports = function (app) {
       data.bumped_on = new Date();
       data.replies.push(addReply);
       data.save((err,data)=> err ? err : res.redirect('/b/'+req.params.board+'/'+req.body.thread_id));
+      
+      console.log('saved');
       
     });
     

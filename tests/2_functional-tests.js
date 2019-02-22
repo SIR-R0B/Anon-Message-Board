@@ -36,13 +36,23 @@ suite('Functional Tests', function() {
       });
     });
   });
-});
+
 //});
-   /*
+   
     suite('GET', function() {
       //list recent threads
-    });
+    test('List Recent Threads',(done)=>{//create thread
+      chai.request(server)
+      .get('/api/threads/test')
+      .end((err,res)=>{
+      assert.equal(res.status,200);
+      done();
     
+    });
+  }); 
+  });
+  });
+    /* 
     suite('DELETE', function() {
       //delete thread with password
     });
@@ -91,5 +101,4 @@ suite('Functional Tests', function() {
     });
     
   });
-
 });
