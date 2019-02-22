@@ -21,7 +21,7 @@ suite('Functional Tests', function() {
     suite('POST', function() {
       
       
-      test('Create Thread',(done)=>{//create thread
+      test('Create Thread and Redirect to ./b/:board',(done)=>{//create thread
       chai.request(server)
       .post('/api/threads/test')
       .send({
@@ -36,13 +36,23 @@ suite('Functional Tests', function() {
       });
     });
   });
-});
-});
-   /* 
+
+//});
+   
     suite('GET', function() {
       //list recent threads
-    });
+    test('List Recent Threads',(done)=>{//create thread
+      chai.request(server)
+      .get('/api/threads/test')
+      .end((err,res)=>{
+      assert.equal(res.status,200);
+      done();
     
+    });
+  }); 
+  });
+  });
+    /* 
     suite('DELETE', function() {
       //delete thread with password
     });
@@ -53,13 +63,31 @@ suite('Functional Tests', function() {
     
 
   });
-  
+  */
   suite('API ROUTING FOR /api/replies/:board', function() {
     
     suite('POST', function() {
       
+    test('Create Reply on a thread',(done)=>{
+      chai.request(server)
+        .post('/api/replies/test')
+        .send({
+      thread_id: '5c6ebe415b111413c5d5d516',
+      text: 'reply text',
+      delete_password: 'test test test'
+      })
+      .end((err,res)=>{
+      assert.equal(res.status,200);
+      expect(res).to.redirect;
+      done();
+      });
+      
+      
+      
     });
     
+    
+    /*
     suite('GET', function() {
       
     });
@@ -69,9 +97,8 @@ suite('Functional Tests', function() {
     });
     
     suite('DELETE', function() {
-      
+     */ 
     });
     
   });
-
-});*/
+});
