@@ -32,6 +32,14 @@ var thread = mongoose.model('thread',threadModel);
 
 module.exports = function (app) {
   
+  app.route('/b/:board')
+  .get((req,res)=>{
+  thread.find({board: req.params.board}).sort({bumped_on: 'desc'}).select('-reported').select('-delete_password').select('-__v').select('-replies.delete_password').select('-replies.reported').select('-board').exec((err,data)=>{
+    if (err) err;
+      res.json(data);
+    });
+  });
+  
   app.route('/api/threads/:board')
   .post((req,res)=>{
     
@@ -42,7 +50,7 @@ module.exports = function (app) {
     delete_password: req.body.delete_password,
     });
     
-    addThread.save((err,data)=> err ? err : res.redirect('/b/'+req.params.board));
+    addThread.save((err,data)=> err ? err : res.redirect('/b/'+req.params.board+'/'));
     
   })
   .get((req,res)=>{
@@ -60,6 +68,17 @@ module.exports = function (app) {
     
     if (data.length > 0) thread.findByIdAndRemove(req.body.thread_id, (err, data)=> res.json('success'));
   });
+  
+  })
+  .put((req,res)=>{
+  
+  thread.findByIdAndUpdate(req.body.thread_id, {reported: true}, (err,data)=>{
+  
+    if (err) return err;
+    
+    res.json('success');
+  
+  })
   
   });
   
@@ -88,8 +107,6 @@ module.exports = function (app) {
     
   })
   .get((req,res)=>{
-    
-    console.log(req.query);
   
     thread.find({board: req.params.board, _id: req.query.thread_id}).sort({bumped_on: 'desc'}).select('-reported').select('-delete_password').select('-__v').select('-replies.delete_password').select('-replies.reported').select('-board').exec((err,data)=>{
     if (err) err;
@@ -99,32 +116,38 @@ module.exports = function (app) {
   })
   .delete((req,res)=>{
     
-    console.log(req.body);
-    
   thread.find({board: req.params.board, _id: req.body.thread_id},(err,data)=>{
-    
-    //console.log(data);
-    
-    console.log(data[0].replies[0]._id);
-    
-    console.log(data[0].replies[0].delete_password);
     
     if ((err == null && data.length == 0) || ((req.body.reply_id != data[0].replies[0]._id) || req.body.delete_password != data[0].replies[0].delete_password)) return res.json('incorrect password');
     
-    console.log('from '+data[0].replies[0].text);
-    
     data[0].replies[0].text = '[deleted]';
-    
-    console.log('to '+ data[0].replies[0].text);
-    
     data[0].replies[0].bumped_on = new Date();
     data[0].bumped_on = new Date();
-    data[0].markModified('replies');
+    data[0].markModified('replies'); // Mongoose needs to be told when Mixed Array Schema Type has been modified to save properly
     data[0].save((err, data) => err ? err.stack : res.json('success'));
     
-    console.log(JSON.stringify(data[0].replies[0].text));
-    
   });
+  
+  })
+  .put((req,res)=>{
+    
+  thread.find({_id: req.body.thread_id, board: req.params.board}, (err,data)=>{
+    
+    if (err) return err;
+  
+    for (let i = 0; i < data[0].replies.length; i++){
+    
+      if (data[0].replies[i]._id == req.body.reply_id) {
+      data[0].replies[i].reported = true;
+      break;
+      }
+     
+    }
+      data[0].markModified('replies');
+      data[0].save((err,data) => err ? err.stack : res.json('success'));
+  
+  return;
+  })
   
   });
   
