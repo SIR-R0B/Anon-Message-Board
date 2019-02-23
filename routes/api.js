@@ -32,6 +32,14 @@ var thread = mongoose.model('thread',threadModel);
 
 module.exports = function (app) {
   
+  app.route('/b/:board')
+  .get((req,res)=>{
+  thread.find({board: req.params.board}).sort({bumped_on: 'desc'}).select('-reported').select('-delete_password').select('-__v').select('-replies.delete_password').select('-replies.reported').select('-board').exec((err,data)=>{
+    if (err) err;
+      res.json(data);
+    });
+  });
+  
   app.route('/api/threads/:board')
   .post((req,res)=>{
     
@@ -42,7 +50,7 @@ module.exports = function (app) {
     delete_password: req.body.delete_password,
     });
     
-    addThread.save((err,data)=> err ? err : res.redirect('/b/'+req.params.board));
+    addThread.save((err,data)=> err ? err : res.redirect('/b/'+req.params.board+'/'));
     
   })
   .get((req,res)=>{

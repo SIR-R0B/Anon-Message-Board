@@ -12,12 +12,50 @@ var assert = chai.assert;
 var expect = chai.expect;
 var server = require('../server');
 
-var test_id;
+var thread_id;
+var delete_thread_id;
+
 var reply_id;
+var delete_reply_thread_id;
+
+
+var delete_password = 'password';
 
 chai.use(chaiHttp);
 
 suite('Functional Tests', function() {
+  
+  //first check if test data exists and then generate test data if not
+  chai.request(server)
+  .get('/api/threads/test')
+  .end((err,res)=>{
+    
+  if (res.body.length < 3){
+     for (let i = 0; i < 3; i++){
+    chai.request(server)
+      .post('/api/threads/test')
+      .send({
+      text: 'text',
+      delete_password: delete_password
+      }).end((err, res)=>{
+      
+    console.log('Test Data Generated');
+    });
+  }  //end if
+      } //end for loop 
+  });
+  
+  chai.request(server)
+    .get('/api/threads/test')
+    .end((err,res)=>{
+    
+     if (res.body.length >= 3){
+      thread_id = res.body[0]._id;
+      delete_thread_id = res.body[1]._id;
+      delete_reply_thread_id = res.body[2]._id
+     }
+      });
+  
 
   suite('API ROUTING FOR /api/threads/:board', function() {
     
@@ -28,9 +66,8 @@ suite('Functional Tests', function() {
       chai.request(server)
       .post('/api/threads/test')
       .send({
-      board: 'test',
-      text: 'test text',
-      delete_password: 'test password'
+      text: 'text',
+      delete_password: delete_password
       })
       .end((err,res)=>{
       assert.equal(res.status,200);
@@ -39,14 +76,14 @@ suite('Functional Tests', function() {
       });
     });
   });
-   
+    
+ 
     suite('GET', function() {
       //list recent threads
     test('List Recent Threads',(done)=>{//create thread
       chai.request(server)
       .get('/api/threads/test')
       .end((err,res)=>{
-      test_id = res.body[0]._id;
       assert.equal(res.status,200);
       assert.isArray(res.body);
       assert.property(res.body[0], '_id');
@@ -63,33 +100,32 @@ suite('Functional Tests', function() {
     });
   }); 
   });
-      
+
+     
       suite('PUT', function() {
       //report thread
       test('Report a Thread',(done)=>{
       chai.request(server)
       .put('/api/threads/test')
       .send({
-      _id: test_id
+      _id: thread_id
       })
       .end((err,res)=>{
       assert.equal(res.status,200);
       assert.equal(res.body, 'success');
-      assert.equal(res.body.reported, true);
       done();
-    
     });
   });
     });
-      
+
     suite('DELETE', function() {
       //delete thread with password
       test('Incorrect Password to Delete Threads with Password',(done)=>{
       chai.request(server)
       .delete('/api/threads/test')
       .send({
-      _id: test_id,
-      delete_password: 'test password'
+      thread_id: delete_thread_id,
+      delete_password: 'wrong password'
       })
       .end((err,res)=>{
       assert.equal(res.status,200);
@@ -98,13 +134,13 @@ suite('Functional Tests', function() {
     
     });
   });
-      
+    
       test('Correct Password to Delete Threads with Password',(done)=>{
       chai.request(server)
       .delete('/api/threads/test')
       .send({
-      _id: test_id,
-      delete_password: 'test password'
+      thread_id: delete_thread_id,
+      delete_password: delete_password
       })
       .end((err,res)=>{
       assert.equal(res.status,200);
@@ -116,8 +152,7 @@ suite('Functional Tests', function() {
       
       
     });
-    
-  });
+  });  
 
   suite('API ROUTING FOR /api/replies/:board', function() {
     
@@ -127,9 +162,9 @@ suite('Functional Tests', function() {
       chai.request(server)
         .post('/api/replies/test')
         .send({
-      thread_id: test_id, 
-      text: 'reply text',
-      delete_password: 'test test test'
+      thread_id: delete_reply_thread_id, 
+      text: 'reply',
+      delete_password: delete_password
       })
       .end((err,res)=>{
       assert.equal(res.status,200);
@@ -138,13 +173,13 @@ suite('Functional Tests', function() {
       });
     });
   });
-    
+
     suite('GET', function() {
       test('Get Replies on a Thread',(done)=>{
       chai.request(server)
-        .get('/api/replies/test')
+      .get('/api/replies/test?thread_id='+delete_reply_thread_id)
       .end((err,res)=>{
-        console.log('reply_id: '+res.body);
+      reply_id = res.body[0].replies[0]._id;
       assert.equal(res.status,200);
       done();
       });
@@ -156,9 +191,9 @@ suite('Functional Tests', function() {
       chai.request(server)
         .put('/api/replies/test')
         .send({
-      thread_id: test_id, 
-      text: 'reply text',
-      delete_password: 'test test test'
+      thread_id: thread_id, 
+      reply_id: reply_id,
+      delete_password: delete_password
       })
       .end((err,res)=>{
       assert.equal(res.status,200);
@@ -167,15 +202,16 @@ suite('Functional Tests', function() {
     });
     });
     
+    
     suite('DELETE', function() {
+      
      test('Incorrect Delete Password to Delete Reply on a Thread',(done)=>{
       chai.request(server)
         .delete('/api/replies/test')
         .send({
-      thread_id: test_id, 
+      thread_id: delete_reply_thread_id, 
       reply_id: reply_id,
-      text: 'reply text',
-      delete_password: 'test test test'
+      delete_password: 'wrong password'
       })
       .end((err,res)=>{
       assert.equal(res.status,200);
@@ -183,13 +219,14 @@ suite('Functional Tests', function() {
       done();
       });
     });
+      
     test('Correct Delete Password to Delete Reply on a Thread',(done)=>{
       chai.request(server)
         .delete('/api/replies/test')
         .send({
-      thread_id: test_id, 
+      thread_id: delete_reply_thread_id, 
       reply_id: reply_id,
-      delete_password: 'test test test'
+      delete_password: delete_password
       })
       .end((err,res)=>{
       assert.equal(res.status,200);
@@ -202,4 +239,4 @@ suite('Functional Tests', function() {
     
   });
 });
-  
+   
